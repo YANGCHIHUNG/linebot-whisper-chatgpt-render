@@ -2,4 +2,3 @@ Flask
 line-bot-sdk
 gunicorn
 openai
-pytranscriber
