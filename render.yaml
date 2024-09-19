@@ -1,0 +1,9 @@
+services:
+  - type: web
+    name: line-bot
+    env: python
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: |
+      apt-get update && \
+      apt-get install -y ffmpeg && \
+      python app.py
