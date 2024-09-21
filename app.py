@@ -27,7 +27,7 @@ def webhook():
     print(f"Webhook received: {body}")  # 打印請求內容以進行調試
     
     for event in events:
-        if event["type"] == "message" and event["message"]["type"] == "audio":
+        if event["type"] == "message" and event["message"]["type"] == "file":
             # 取得音頻消息ID
             message_id = event["message"]["id"]
 
