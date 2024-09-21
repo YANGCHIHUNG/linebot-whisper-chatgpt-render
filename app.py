@@ -9,8 +9,8 @@ import openai
 app = Flask(__name__)
 
 # 設定 Line 和 OpenAI 的密鑰（從環境變數中取得）
-LINE_ACCESS_TOKEN = os.getenv("jEev/GLvPZYSbP7yWaLN9WRSNPgp/Onpw6vzMzRjdYUvrjJ7fDa81D/+laXdw3qUJHuQjy2w+nbF8O6Sz0ADoBR5q2W0ARJu57OjqKMuwyAZmfcg+1Tn1z0lmaNA3UAHMCNcAh2c9/bT+2wxuL8JlQdB04t89/1O/w1cDnyilFU=")
-OPENAI_API_KEY = os.getenv("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")
+LINE_ACCESS_TOKEN = "jEev/GLvPZYSbP7yWaLN9WRSNPgp/Onpw6vzMzRjdYUvrjJ7fDa81D/+laXdw3qUJHuQjy2w+nbF8O6Sz0ADoBR5q2W0ARJu57OjqKMuwyAZmfcg+1Tn1z0lmaNA3UAHMCNcAh2c9/bT+2wxuL8JlQdB04t89/1O/w1cDnyilFU="
+OPENAI_API_KEY = "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"
 openai.api_key = OPENAI_API_KEY
 
 # Line Messaging API 的請求頭
@@ -65,7 +65,7 @@ def download_line_audio(message_id):
     if response.status_code == 200:
         return response.content
     else:
-        print("下載音頻失敗:", response.status_code)
+        print("~下載音頻失敗~:", response.status_code)
         return None
 
 # 調用 Whisper API 轉錄音頻
@@ -78,7 +78,7 @@ def transcribe_audio_with_whisper(audio_file_path):
         audio_file.close()
         return transcription
     except Exception as e:
-        print(f"Whisper API 轉錄失敗: {e}")
+        print(f"~Whisper API 轉錄失敗~: {e}")
         return None
 
 
@@ -109,7 +109,7 @@ def reply_to_line(reply_token, message_text):
     response = requests.post("https://api.line.me/v2/bot/message/reply", headers=headers, json=payload)
     
     if response.status_code != 200:
-        print("回覆消息失敗:", response.status_code)
+        print("~回覆消息失敗~:", response.status_code)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=5000)
