@@ -1,5 +1,7 @@
 import os
 from flask import Flask, request, jsonify
+from linebot import LineBotApi
+from linebot.models import MessageEvent, AudioMessage
 import requests
 import openai
 
@@ -22,6 +24,7 @@ headers = {
 def webhook():
     body = request.json
     events = body.get("events", [])
+    print(f"Webhook received: {body}")  # 打印請求內容以進行調試
     
     for event in events:
         if event["type"] == "message" and event["message"]["type"] == "audio":
@@ -60,11 +63,17 @@ def download_line_audio(message_id):
 
 # 調用 Whisper API 轉錄音頻
 def transcribe_audio_with_whisper(audio_file_path):
-    audio_file = open(audio_file_path, "rb")
-    response = openai.Audio.transcribe(model="whisper-1", file=audio_file)
-    transcription = response["text"]
-    audio_file.close()
-    return transcription
+    try:
+        audio_file = open(audio_file_path, "rb")
+        response = openai.Audio.transcribe(model="whisper-1", file=audio_file)
+        transcription = response["text"]
+        print(f"Transcription result: {transcription}")
+        audio_file.close()
+        return transcription
+    except Exception as e:
+        print(f"Whisper API 轉錄失敗: {e}")
+        return None
+
 
 # 調用 ChatGPT API 進行摘要生成
 def summarize_with_chatgpt(text):
