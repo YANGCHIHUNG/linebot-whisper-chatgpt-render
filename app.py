@@ -70,8 +70,10 @@ def download_line_audio(message_id):
 
 # 調用 Whisper API 轉錄音頻
 def transcribe_audio_with_whisper(audio_file_path):
+    print("開始進行音檔轉錄...")  # Step 1: 開始轉錄
     try:
         audio_file = open(audio_file_path, "rb")
+        print(f"開啟音檔: {file_path}")  # Step 2: 成功開啟音檔
         response = openai.Audio.transcribe(model="whisper-1", file=audio_file)
         transcription = response["text"]
         print(f"Transcription result: {transcription}")
