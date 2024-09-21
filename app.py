@@ -10,7 +10,7 @@ app = Flask(__name__)
 
 # 設定 Line 和 OpenAI 的密鑰（從環境變數中取得）
 LINE_ACCESS_TOKEN = "jEev/GLvPZYSbP7yWaLN9WRSNPgp/Onpw6vzMzRjdYUvrjJ7fDa81D/+laXdw3qUJHuQjy2w+nbF8O6Sz0ADoBR5q2W0ARJu57OjqKMuwyAZmfcg+1Tn1z0lmaNA3UAHMCNcAh2c9/bT+2wxuL8JlQdB04t89/1O/w1cDnyilFU="
-OPENAI_API_KEY = "sk-Hps7pT6cnsiDTn22nMWnM4RADyyY5bU69UP99m1VWlT3BlbkFJeLK6T8N9PBL4flaHnNNLK-XwH9xCyQ7NShLYVCMuQA"
+OPENAI_API_KEY = "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"
 openai.api_key = OPENAI_API_KEY
 
 # Line Messaging API 的請求頭
@@ -63,6 +63,7 @@ def download_line_audio(message_id):
     response = requests.get(url, headers={"Authorization": f"Bearer {LINE_ACCESS_TOKEN}"})
     
     if response.status_code == 200:
+        print("~下載音頻成功~")
         return response.content
     else:
         print("~下載音頻失敗~:", response.status_code)
