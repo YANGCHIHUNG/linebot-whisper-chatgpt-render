@@ -19,6 +19,10 @@ headers = {
     "Content-Type": "application/json"
 }
 
+@app.route("/", methods=["GET"])
+def home():
+    return "App is running", 200
+
 # 處理 Line Bot Webhook 的消息
 @app.route("/webhook", methods=["POST"])
 def webhook():
@@ -51,7 +55,7 @@ def webhook():
                 # 回覆用戶處理結果
                 reply_to_line(event["replyToken"], summary)
     
-    return "OK", 200
+    return "APP is running", 200
 
 # 下載 Line 音頻消息
 def download_line_audio(message_id):
