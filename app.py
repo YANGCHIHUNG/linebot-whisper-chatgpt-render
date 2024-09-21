@@ -30,6 +30,9 @@ def webhook():
         if event["type"] == "message" and event["message"]["type"] == "audio":
             # 取得音頻消息ID
             message_id = event["message"]["id"]
+
+            # 先回覆一個「已收到」的訊息給使用者
+            reply_to_line(event["replyToken"], "已收到音訊檔，正在處理中，請稍候。")
             
             # 調用 Line API 下載音頻檔案
             audio_content = download_line_audio(message_id)
