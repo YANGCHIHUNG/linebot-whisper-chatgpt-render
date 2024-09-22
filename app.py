@@ -37,6 +37,13 @@ def handle_message(event):
     user_message = event.message.text
     print(f"Received message from user: {user_message}")  # 打印使用者訊息
 
+    # 立即回覆「已收到」訊息
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text="已收到")
+    )
+    print("Replied with acknowledgment: 已收到")  # 打印已回覆訊息
+
     # 呼叫 ChatGPT 進行摘要
     summary = summarize_with_chatgpt(user_message)
 
