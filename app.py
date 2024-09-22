@@ -36,7 +36,7 @@ def handle_message(event):
 
     # 呼叫 OpenAI 的 ChatGPT API
     response = openai.Completion.create(
-        engine="text-davinci-003",
+        engine="gpt-3.5-turbo",
         prompt=user_message,
         max_tokens=150,
         n=1,
