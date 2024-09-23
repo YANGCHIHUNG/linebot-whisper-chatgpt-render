@@ -41,25 +41,32 @@ def handle_message(event):
         # 呼叫 OpenAI 的 ChatGPT API
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
-            messages=[
-                {"role": "user", "content": user_message}
-            ],
+            messages=[{"role": "user", "content": user_message}],
             max_tokens=150,
             n=1,
             temperature=0.7,
         )
+
+        chatgpt_response = response['choices'][0]['message']['content'].strip()
+
+        # 回應使用者的訊息
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=chatgpt_response)
+        )
     except openai.error.RateLimitError:
-        # 返回自定義訊息或其他替代方案
-        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="目前服務暫時無法使用，請稍後再試。"))
+        line_bot_api.reply_message(
+            event.reply_token, 
+            TextSendMessage(text="目前服務暫時無法使用，請稍後再試。")
+        )
+    except Exception as e:
+        print(f"Error handling message: {e}")
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text="發生了一個錯誤，請稍後再試。")
+        )
 
 
-    chatgpt_response = response['choices'][0]['text'].strip()
-
-    # 回應使用者的訊息
-    line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=chatgpt_response)
-    )
 
 # 啟動 Flask 伺服器
 if __name__ == "__main__":
