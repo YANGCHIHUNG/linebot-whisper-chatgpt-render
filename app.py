@@ -26,7 +26,10 @@ def callback():
         handler.handle(body, signature)
     except InvalidSignatureError:
         abort(400)
-
+    except Exception as e:
+        print(f"Error handling message: {e}")
+        abort(500)
+        
     return 'OK'
 
 # 處理來自 Line 的訊息事件
@@ -34,15 +37,21 @@ def callback():
 def handle_message(event):
     user_message = event.message.text
 
-    # 呼叫 OpenAI 的 ChatGPT API
-    response = openai.Completion.create(
-        engine="gpt-3.5-turbo",
-        prompt=user_message,
-        max_tokens=150,
-        n=1,
-        stop=None,
-        temperature=0.7,
-    )
+    try:
+        # 呼叫 OpenAI 的 ChatGPT API
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "user", "content": user_message}
+            ],
+            max_tokens=150,
+            n=1,
+            temperature=0.7,
+        )
+    except openai.error.RateLimitError:
+        # 返回自定義訊息或其他替代方案
+        line_bot_api.reply_message(event.reply_token, TextSendMessage(text="目前服務暫時無法使用，請稍後再試。"))
+
 
     chatgpt_response = response['choices'][0]['text'].strip()
 
