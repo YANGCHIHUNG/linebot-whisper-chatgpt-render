@@ -13,8 +13,7 @@ line_bot_api = LineBotApi(os.getenv('CHANNEL_ACCESS_TOKEN'))
 handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
 
 # OpenAI API 憑證
-#openai.api_key = os.getenv('OPENAI_API_KEY')
-openai.api_key = "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"
+openai.api_key = os.getenv('OPENAI_API_KEY')
 
 # Line Webhook 接口
 @app.route("/webhook", methods=['POST'])
