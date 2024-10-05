@@ -5,7 +5,6 @@ from linebot.models import MessageEvent, TextMessage, TextSendMessage
 
 import os
 import openai
-import whisper
 
 # 初始化 Flask 應用
 app = Flask(__name__)
