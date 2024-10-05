@@ -51,10 +51,9 @@ def handle_message(event):
             for chunk in message_content.iter_content():
                 fd.write(chunk)
         
-        # 使用 Whisper 進行語音轉文字
-        result = model.transcribe(audio_path, language="zh")
-        transcription = result['text']
-
+        # 使用 OpenAI Whisper API 進行語音轉文字
+        transcription = transcribe_audio_openai(audio_path)
+        
         # 呼叫 OpenAI API 來彙整重點
         summary = summarize_text(transcription)
         
@@ -67,30 +66,27 @@ def handle_message(event):
         # 刪除暫時儲存的音檔
         os.remove(audio_path)
 
+def transcribe_audio_openai(audio_path):
+    # 使用 OpenAI Whisper API 轉錄語音
+    with open(audio_path, "rb") as audio_file:
+        transcript = openai.Audio.transcribe(
+            model="whisper-1",
+            file=audio_file,
+            language="zh"  # 指定語言為中文
+        )
+    return transcript['text']
+
 def summarize_text(text):
-    try:
-        # 使用 ChatGPT 模型來彙整文字
-        response = openai.Completion.create(
-            engine="gpt-3.5-turbo",  # 使用你偏好的模型版本
-            prompt=f"請將以下文字彙整成重點:\n\n{text}",
-            max_tokens=500,
-            temperature=0.5,
-            n=1,
-            stop=None
-        )
-        return response['choices'][0]['text'].strip()
-    
-    except openai.error.RateLimitError:
-        line_bot_api.reply_message(
-            event.reply_token, 
-            TextSendMessage(text="目前服務暫時無法使用，請稍後再試。")
-        )
-    except Exception as e:
-        print(f"Error handling message: {e}")
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text="發生了一個錯誤，請稍後再試。")
-        )
+    # 使用 ChatGPT 模型來彙整文字
+    response = openai.Completion.create(
+        engine="gpt-3.5-turbo",  # 使用你偏好的模型版本
+        prompt=f"請將以下文字彙整成重點:\n\n{text}",
+        max_tokens=500,
+        temperature=0.5,
+        n=1,
+        stop=None
+    )
+    return response['choices'][0]['text'].strip()
 
 
 '''
