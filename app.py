@@ -16,10 +16,6 @@ handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
 # OpenAI API 憑證
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
-# Whisper 模型載入
-model = whisper.load_model("base")  # 或 "small", "medium", "large" 根據你的需求
-
-
 # Line Webhook 接口
 @app.route("/webhook", methods=['POST'])
 def callback():
