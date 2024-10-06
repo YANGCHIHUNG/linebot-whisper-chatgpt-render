@@ -1,9 +1,10 @@
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage, AudioMessage, AudioSendMessage
+from linebot.models import MessageEvent, AudioMessage, TextSendMessage
 import os
 import openai
+import requests
 
 # 初始化 Flask 應用
 app = Flask(__name__)
@@ -17,7 +18,7 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 
 # Line Messaging API 的請求頭
 headers = {
-    "Authorization": f"Bearer {line_bot_api}",
+    "Authorization": f"Bearer {os.getenv('CHANNEL_ACCESS_TOKEN')}",
     "Content-Type": "application/json"
 }
 
@@ -43,18 +44,15 @@ def webhook():
                 # 使用 Whisper API 進行轉錄
                 transcription = transcribe_audio_with_whisper("audio_file.m4a")
 
-                # 使用 ChatGPT 將轉錄文本整理為重點
-                summary = summarize_with_chatgpt(transcription)
-
-                # 回覆用戶處理結果
-                reply_to_line(event["replyToken"], summary)
+                # 回覆用戶轉錄結果
+                reply_to_line(event["replyToken"], transcription)
     
     return "OK", 200
 
 # 下載 Line 音頻消息
 def download_line_audio(message_id):
     url = f"https://api-data.line.me/v2/bot/message/{message_id}/content"
-    response = requests.get(url, headers={"Authorization": f"Bearer {LINE_ACCESS_TOKEN}"})
+    response = requests.get(url, headers={"Authorization": f"Bearer {os.getenv('CHANNEL_ACCESS_TOKEN')}"})
     
     if response.status_code == 200:
         return response.content
@@ -69,21 +67,6 @@ def transcribe_audio_with_whisper(audio_file_path):
     transcription = response["text"]
     audio_file.close()
     return transcription
-
-# 調用 ChatGPT API 進行摘要生成
-def summarize_with_chatgpt(text):
-    prompt = f"請將以下內容整理成重點：\n\n{text}"
-    
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "system", "content": "你是一名優秀的文本摘要專家。"},
-            {"role": "user", "content": prompt}
-        ]
-    )
-    
-    summary = response["choices"][0]["message"]["content"]
-    return summary
 
 # 向用戶發送 Line 消息回覆
 def reply_to_line(reply_token, message_text):
