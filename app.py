@@ -48,15 +48,17 @@ def handle_file_message(event):
     # 調用 OpenAI Whisper API 進行語音轉文字
     transcription = transcribe_audio(audio_file_path)
     
-    # 回傳轉換結果
+    # 調用 OpenAI ChatGPT API 進行重點彙整
     if transcription:
-        result_text = transcription.get('text', '無法進行語音轉文字')
+        transcription_text = transcription.get('text', '無法進行語音轉文字')
+        summary = summarize_text(transcription_text)
     else:
-        result_text = '無法進行語音轉文字，請稍後再試。'
+        summary = '無法進行語音轉文字，請稍後再試。'
 
+    # 回傳彙整結果
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text=result_text)
+        TextSendMessage(text=summary)
     )
 
 def transcribe_audio(file_path):
@@ -82,6 +84,34 @@ def transcribe_audio(file_path):
         print(f"Error: {response.status_code}, {response.text}")
         return None
 
+def summarize_text(text):
+    """
+    使用 OpenAI GPT API 進行文字重點彙整
+    :param text: 待彙整的文字
+    :return: 重點彙整後的文字
+    """
+    url = "https://api.openai.com/v1/chat/completions"
+    headers = {
+        "Authorization": f"Bearer {OPENAI_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    data = {
+        "model": "gpt-3.5-turbo",  # 或使用 'gpt-4'，如果有權限
+        "messages": [
+            {"role": "system", "content": "你是一個幫助將長篇文章進行重點彙整的助手。"},
+            {"role": "user", "content": f"請幫我彙整以下內容的重點：{text}"}
+        ],
+        "temperature": 0.7
+    }
+    
+    response = requests.post(url, headers=headers, json=data)
+
+    if response.status_code == 200:
+        result = response.json()
+        return result['choices'][0]['message']['content'].strip()
+    else:
+        print(f"Error: {response.status_code}, {response.text}")
+        return "無法進行重點彙整，請稍後再試。"
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
