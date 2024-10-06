@@ -17,7 +17,7 @@ openai.api_key = os.getenv('OPENAI_API_KEY')
 
 # Line Messaging API 的請求頭
 headers = {
-    "Authorization": f"Bearer {LINE_ACCESS_TOKEN}",
+    "Authorization": f"Bearer {line_bot_api}",
     "Content-Type": "application/json"
 }
 
