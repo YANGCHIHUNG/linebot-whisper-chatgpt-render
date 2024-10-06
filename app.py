@@ -1,86 +1,59 @@
+import os
+import openai
+import tempfile
+import requests
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, AudioMessage, TextSendMessage
-import os
-import openai
-import requests
 
-# 初始化 Flask 應用
+# 設定 OpenAI 的 API 金鑰
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# 設定你的 LINE Channel Access Token 和 Channel Secret
+LINE_CHANNEL_ACCESS_TOKEN = os.getenv("CHANNEL_ACCESS_TOKEN")
+LINE_CHANNEL_SECRET = os.getenv("CHANNEL_SECRET")
+
+line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
+handler = WebhookHandler(LINE_CHANNEL_SECRET)
+
 app = Flask(__name__)
 
-# Line Bot Credentials
-line_bot_api = LineBotApi(os.getenv('CHANNEL_ACCESS_TOKEN'))
-handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
+@app.route("/webhook", methods=['POST'])
+def callback():
+    # get X-Line-Signature header value
+    signature = request.headers['X-Line-Signature']
 
-# OpenAI API 憑證
-openai.api_key = os.getenv('OPENAI_API_KEY')
-
-# Line Messaging API 的請求頭
-headers = {
-    "Authorization": f"Bearer {os.getenv('CHANNEL_ACCESS_TOKEN')}",
-    "Content-Type": "application/json"
-}
-
-# 處理 Line Bot Webhook 的消息
-@app.route("/webhook", methods=["POST"])
-def webhook():
-    body = request.json
-    events = body.get("events", [])
+    # get request body as text
+    body = request.get_data(as_text=True)
     
-    for event in events:
-        if event["type"] == "message" and event["message"]["type"] == "audio":
-            # 取得音頻消息ID
-            message_id = event["message"]["id"]
-            
-            # 調用 Line API 下載音頻檔案
-            audio_content = download_line_audio(message_id)
+    try:
+        handler.handle(body, signature)
+    except InvalidSignatureError:
+        abort(400)
 
-            if audio_content:
-                # 保存音頻檔案
-                with open("audio_file.m4a", "wb") as f:
-                    f.write(audio_content)
+    return 'OK'
 
-                # 使用 Whisper API 進行轉錄
-                transcription = transcribe_audio_with_whisper("audio_file.m4a")
-
-                # 回覆用戶轉錄結果
-                reply_to_line(event["replyToken"], transcription)
+@handler.add(MessageEvent, message=AudioMessage)
+def handle_audio_message(event):
+    # 取得語音檔案的URL
+    message_content = line_bot_api.get_message_content(event.message.id)
     
-    return "OK", 200
-
-# 下載 Line 音頻消息
-def download_line_audio(message_id):
-    url = f"https://api-data.line.me/v2/bot/message/{message_id}/content"
-    response = requests.get(url, headers={"Authorization": f"Bearer {os.getenv('CHANNEL_ACCESS_TOKEN')}"})
+    with tempfile.NamedTemporaryFile(suffix='.m4a', delete=False) as tf:
+        for chunk in message_content.iter_content():
+            tf.write(chunk)
+        temp_file_path = tf.name
     
-    if response.status_code == 200:
-        return response.content
-    else:
-        print("下載音頻失敗:", response.status_code)
-        return None
-
-# 調用 Whisper API 轉錄音頻
-def transcribe_audio_with_whisper(audio_file_path):
-    audio_file = open(audio_file_path, "rb")
-    response = openai.Audio.transcribe(model="whisper-1", file=audio_file)
-    transcription = response["text"]
-    audio_file.close()
-    return transcription
-
-# 向用戶發送 Line 消息回覆
-def reply_to_line(reply_token, message_text):
-    payload = {
-        "replyToken": reply_token,
-        "messages": [{
-            "type": "text",
-            "text": message_text
-        }]
-    }
-    response = requests.post("https://api.line.me/v2/bot/message/reply", headers=headers, json=payload)
+    # 使用 OpenAI Whisper API 進行語音轉文字
+    with open(temp_file_path, "rb") as audio_file:
+        transcript = openai.Audio.transcribe("whisper-1", audio_file)
     
-    if response.status_code != 200:
-        print("回覆消息失敗:", response.status_code)
+    # 回傳轉成的文字訊息給用戶
+    text_message = TextSendMessage(text=transcript["text"])
+    line_bot_api.reply_message(event.reply_token, text_message)
+    
+    # 刪除臨時文件
+    os.remove(temp_file_path)
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)
+    app.run()
