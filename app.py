@@ -1,7 +1,7 @@
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, TextMessage, TextSendMessage
+from linebot.models import MessageEvent, TextMessage, TextSendMessage, AudioMessage, AudioSendMessage
 import os
 import openai
 
@@ -36,40 +36,37 @@ def callback():
     return 'OK', 200
 
 # 當接收到語音訊息時
-@handler.add(MessageEvent, message=TextMessage)
+@handler.add(MessageEvent, message=AudioMessage)
 def handle_message(event):
     try:
-        if event.message.content_provider.type == 'line':
-            # 下載語音訊息
-            message_content = line_bot_api.get_message_content(event.message.id)
-            audio_path = f"{event.message.id}.mp3"
+        # 下載語音訊息
+        message_content = line_bot_api.get_message_content(event.message.id)
+        audio_path = f"{event.message.id}.mp3"
 
-            print(f"Downloading audio to {audio_path}...")  # 除錯訊息
+        print(f"Downloading audio to {audio_path}...", flush=True)  # 除錯訊息
 
-            with open(audio_path, 'wb') as fd:
-                for chunk in message_content.iter_content():
-                    fd.write(chunk)
+        with open(audio_path, 'wb') as fd:
+            for chunk in message_content.iter_content():
+                fd.write(chunk)
 
-            print("Audio downloaded successfully.")  # 除錯訊息
-            
-            # 使用 OpenAI Whisper API 進行語音轉文字
-            transcription = transcribe_audio_openai(audio_path)
+        print("Audio downloaded successfully.", flush=True)  # 除錯訊息
+        
+        # 使用 OpenAI Whisper API 進行語音轉文字
+        transcription = transcribe_audio_openai(audio_path)
 
-            print(f"Transcription result: {transcription}")  # 顯示轉錄的結果
+        print(f"Transcription result: {transcription}", flush=True)  # 顯示轉錄的結果
 
-            # 回傳轉錄結果給使用者
-            line_bot_api.reply_message(
-                event.reply_token,
-                TextSendMessage(text=f"語音轉錄結果：{transcription}")
-            )
+        # 回傳轉錄結果給使用者
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=f"語音轉錄結果：{transcription}")
+        )
 
-            # 刪除暫時儲存的音檔
-            os.remove(audio_path)
-            print(f"Temporary audio file {audio_path} deleted.")  # 除錯訊息
-        else:
-            print("Message is not a voice message.")
+        # 刪除暫時儲存的音檔
+        os.remove(audio_path)
+        print(f"Temporary audio file {audio_path} deleted.", flush=True)  # 除錯訊息
     except Exception as e:
-        print(f"Error in handle_message: {e}")
+        print(f"Error in handle_message: {e}", flush=True)
 
 def transcribe_audio_openai(audio_path):
     print(f"Uploading audio {audio_path} to OpenAI Whisper API...")  # 除錯訊息
