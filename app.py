@@ -2,7 +2,7 @@ import os
 from flask import Flask, request, abort, send_file
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, AudioMessage, TextSendMessage
+from linebot.models import MessageEvent, AudioMessage, TextSendMessage, AudioSendMessage
 
 app = Flask(__name__)
 
@@ -19,9 +19,12 @@ def callback():
     signature = request.headers['X-Line-Signature']
     body = request.get_data(as_text=True)
     
+    print("Received webhook: ", body)  # 增加這一行來檢查 webhook 是否被觸發
+    
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
+        print("Invalid signature. Check the channel secret.")  # 增加這一行來檢查簽名是否正確
         abort(400)
     
     return 'OK'
@@ -51,7 +54,7 @@ def handle_audio_message(event):
     with open(audio_file_path, 'rb') as f:
         line_bot_api.push_message(
             event.source.user_id,
-            AudioSendMessage(original_content_url=f'https://your-domain/{audio_file_path}', duration=60000)  # 假設檔案時長為60秒
+            AudioSendMessage(original_content_url=f'https://linebot-pytranscriber-openai.onrender.com/{audio_file_path}', duration=60000)  # 假設檔案時長為60秒
         )
 
 @app.route('/<filename>', methods=['GET'])
