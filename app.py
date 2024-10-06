@@ -36,6 +36,7 @@ def callback():
 
 @handler.add(MessageEvent, message=AudioMessage)
 def handle_audio_message(event):
+    print("收到音訊訊息")  # 調試用輸出
     # 取得語音檔案的URL
     message_content = line_bot_api.get_message_content(event.message.id)
     
@@ -43,10 +44,15 @@ def handle_audio_message(event):
         for chunk in message_content.iter_content():
             tf.write(chunk)
         temp_file_path = tf.name
+        print(f"暫存檔案已儲存: {temp_file_path}")  # 調試用輸出
     
+    # 發送「已收到」的回應
+    line_bot_api.reply_message(event.reply_token, TextSendMessage(text="已收到"))
+
     # 使用 OpenAI Whisper API 進行語音轉文字
     with open(temp_file_path, "rb") as audio_file:
         transcript = openai.Audio.transcribe("whisper-1", audio_file)
+        print("轉換結果:", transcript["text"])  # 調試用輸出
     
     # 回傳轉成的文字訊息給用戶
     text_message = TextSendMessage(text=transcript["text"])
@@ -54,6 +60,7 @@ def handle_audio_message(event):
     
     # 刪除臨時文件
     os.remove(temp_file_path)
+    print(f"已刪除暫存檔案: {temp_file_path}")  # 調試用輸出
 
 if __name__ == "__main__":
     app.run()
