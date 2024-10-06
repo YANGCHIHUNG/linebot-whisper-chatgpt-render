@@ -1,8 +1,8 @@
 import os
-from flask import Flask, request, abort, send_file
+from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
-from linebot.models import MessageEvent, AudioMessage, TextSendMessage, AudioSendMessage
+from linebot.models import MessageEvent, FileMessage, TextSendMessage
 
 app = Flask(__name__)
 
@@ -19,47 +19,24 @@ def callback():
     signature = request.headers['X-Line-Signature']
     body = request.get_data(as_text=True)
     
-    print("Received webhook: ", body)  # 增加這一行來檢查 webhook 是否被觸發
+    print("Received webhook: ", body)  # 確認 webhook 被觸發
     
     try:
         handler.handle(body, signature)
     except InvalidSignatureError:
-        print("Invalid signature. Check the channel secret.")  # 增加這一行來檢查簽名是否正確
+        print("Invalid signature. Check the channel secret.")
         abort(400)
     
     return 'OK'
 
-# 處理接收到的音訊訊息
-@handler.add(MessageEvent, message=AudioMessage)
-def handle_audio_message(event):
-    # 取得音訊檔案的ID
-    message_id = event.message.id
-    
-    # 將音訊檔案從LINE伺服器下載
-    message_content = line_bot_api.get_message_content(message_id)
-    
-    # 儲存音訊檔案
-    audio_file_path = f"{message_id}.m4a"
-    with open(audio_file_path, 'wb') as fd:
-        for chunk in message_content.iter_content():
-            fd.write(chunk)
-    
-    # 回傳已接收到的音訊檔案
+# 處理接收到的檔案訊息
+@handler.add(MessageEvent, message=FileMessage)
+def handle_file_message(event):
+    # 回傳已接收到的音檔訊息
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text="音訊檔案已接收並將回傳給您。")
+        TextSendMessage(text="已收到您的音檔。")
     )
-    
-    # 發送回音訊檔案
-    with open(audio_file_path, 'rb') as f:
-        line_bot_api.push_message(
-            event.source.user_id,
-            AudioSendMessage(original_content_url=f'https://linebot-pytranscriber-openai.onrender.com/{audio_file_path}', duration=60000)  # 假設檔案時長為60秒
-        )
-
-@app.route('/<filename>', methods=['GET'])
-def serve_audio_file(filename):
-    return send_file(filename, as_attachment=True)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
