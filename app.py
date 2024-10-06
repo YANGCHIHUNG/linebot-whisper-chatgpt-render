@@ -15,75 +15,89 @@ handler = WebhookHandler(os.getenv('CHANNEL_SECRET'))
 # OpenAI API 憑證
 openai.api_key = os.getenv('OPENAI_API_KEY')
 
-# Line Webhook 接口
-@app.route("/webhook", methods=['POST'])
-def callback():
-    # 獲取 Line 的簽名
-    signature = request.headers['X-Line-Signature']
+# Line Messaging API 的請求頭
+headers = {
+    "Authorization": f"Bearer {LINE_ACCESS_TOKEN}",
+    "Content-Type": "application/json"
+}
 
-    # get request body as text
-    body = request.get_data(as_text=True)
+# 處理 Line Bot Webhook 的消息
+@app.route("/webhook", methods=["POST"])
+def webhook():
+    body = request.json
+    events = body.get("events", [])
+    
+    for event in events:
+        if event["type"] == "message" and event["message"]["type"] == "audio":
+            # 取得音頻消息ID
+            message_id = event["message"]["id"]
+            
+            # 調用 Line API 下載音頻檔案
+            audio_content = download_line_audio(message_id)
 
-    try:
-        handler.handle(body, signature)
-    except InvalidSignatureError:
-        print("Invalid signature error.")
-        abort(400)
-    except Exception as e:
-        print(f"Error handling message: {e}")
-        abort(500)
-        
-    return 'OK', 200
+            if audio_content:
+                # 保存音頻檔案
+                with open("audio_file.m4a", "wb") as f:
+                    f.write(audio_content)
 
-# 當接收到語音訊息時
-@handler.add(MessageEvent, message=AudioMessage)
-def handle_message(event):
-    try:
-        # 下載語音訊息
-        message_content = line_bot_api.get_message_content(event.message.id)
-        audio_path = f"{event.message.id}.mp3"
+                # 使用 Whisper API 進行轉錄
+                transcription = transcribe_audio_with_whisper("audio_file.m4a")
 
-        print(f"Downloading audio to {audio_path}...", flush=True)  # 除錯訊息
+                # 使用 ChatGPT 將轉錄文本整理為重點
+                summary = summarize_with_chatgpt(transcription)
 
-        with open(audio_path, 'wb') as fd:
-            for chunk in message_content.iter_content():
-                fd.write(chunk)
+                # 回覆用戶處理結果
+                reply_to_line(event["replyToken"], summary)
+    
+    return "OK", 200
 
-        print("Audio downloaded successfully.", flush=True)  # 除錯訊息
-        
-        # 使用 OpenAI Whisper API 進行語音轉文字
-        transcription = transcribe_audio_openai(audio_path)
+# 下載 Line 音頻消息
+def download_line_audio(message_id):
+    url = f"https://api-data.line.me/v2/bot/message/{message_id}/content"
+    response = requests.get(url, headers={"Authorization": f"Bearer {LINE_ACCESS_TOKEN}"})
+    
+    if response.status_code == 200:
+        return response.content
+    else:
+        print("下載音頻失敗:", response.status_code)
+        return None
 
-        print(f"Transcription result: {transcription}", flush=True)  # 顯示轉錄的結果
+# 調用 Whisper API 轉錄音頻
+def transcribe_audio_with_whisper(audio_file_path):
+    audio_file = open(audio_file_path, "rb")
+    response = openai.Audio.transcribe(model="whisper-1", file=audio_file)
+    transcription = response["text"]
+    audio_file.close()
+    return transcription
 
-        # 回傳轉錄結果給使用者
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=f"語音轉錄結果：{transcription}")
-        )
+# 調用 ChatGPT API 進行摘要生成
+def summarize_with_chatgpt(text):
+    prompt = f"請將以下內容整理成重點：\n\n{text}"
+    
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "你是一名優秀的文本摘要專家。"},
+            {"role": "user", "content": prompt}
+        ]
+    )
+    
+    summary = response["choices"][0]["message"]["content"]
+    return summary
 
-        # 刪除暫時儲存的音檔
-        os.remove(audio_path)
-        print(f"Temporary audio file {audio_path} deleted.", flush=True)  # 除錯訊息
-    except Exception as e:
-        print(f"Error in handle_message: {e}", flush=True)
+# 向用戶發送 Line 消息回覆
+def reply_to_line(reply_token, message_text):
+    payload = {
+        "replyToken": reply_token,
+        "messages": [{
+            "type": "text",
+            "text": message_text
+        }]
+    }
+    response = requests.post("https://api.line.me/v2/bot/message/reply", headers=headers, json=payload)
+    
+    if response.status_code != 200:
+        print("回覆消息失敗:", response.status_code)
 
-def transcribe_audio_openai(audio_path):
-    print(f"Uploading audio {audio_path} to OpenAI Whisper API...")  # 除錯訊息
-    try:
-        with open(audio_path, "rb") as audio_file:
-            transcript = openai.Audio.transcribe(
-                model="whisper-1",
-                file=audio_file,
-                language="zh"  # 指定語言為中文
-            )
-            print("Transcription successful.")  # 除錯訊息
-            return transcript['text']
-    except Exception as e:
-        print(f"Error during transcription: {e}")  # 除錯訊息
-        return "轉錄過程中發生錯誤。"
-
-# 啟動 Flask 伺服器
 if __name__ == "__main__":
-    port = int(os.getenv("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=5000)
