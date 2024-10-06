@@ -55,16 +55,10 @@ def handle_message(event):
 
         print(f"Transcription: {transcription}")  # 除錯訊息，顯示轉錄的結果
 
-        # 呼叫 OpenAI API 來彙整重點
-        summary = summarize_text(transcription)
-
-        print(f"Summary: {summary}")  # 除錯訊息，顯示摘要結果
-
-        # 回傳轉錄和摘要結果給使用者，一次回覆
-        reply_message = f"語音轉錄結果：\n{transcription}\n\n重點整理：\n{summary}"
+        # 回傳轉錄結果給使用者
         line_bot_api.reply_message(
             event.reply_token,
-            TextSendMessage(text=reply_message)
+            TextSendMessage(text=f"語音轉錄結果：{transcription}")
         )
 
         # 刪除暫時儲存的音檔
@@ -85,18 +79,6 @@ def transcribe_audio_openai(audio_path):
         except Exception as e:
             print(f"Error during transcription: {e}")  # 除錯訊息
             return "轉錄過程中發生錯誤。"
-
-def summarize_text(text):
-    # 使用 ChatGPT 模型來彙整文字
-    response = openai.Completion.create(
-        engine="gpt-3.5-turbo",  # 使用你偏好的模型版本
-        prompt=f"請將以下文字彙整成重點:\n\n{text}",
-        max_tokens=500,
-        temperature=0.5,
-        n=1,
-        stop=None
-    )
-    return response['choices'][0]['text'].strip()
 
 # 啟動 Flask 伺服器
 if __name__ == "__main__":
