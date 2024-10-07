@@ -3,3 +3,4 @@ line-bot-sdk
 gunicorn
 openai==0.28.0
 requests
+pydub
