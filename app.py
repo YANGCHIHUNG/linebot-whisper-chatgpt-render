@@ -114,6 +114,12 @@ def handle_file_message(event):
     for segment in audio_segments:
         transcription = transcribe_audio(segment)
         all_text += transcription + "\n"
+
+    # 將轉錄結果作為文字訊息回傳給用戶
+    line_bot_api.reply_message(
+        event.reply_token,
+        TextSendMessage(text=f"語音轉文字結果：\n{all_text}")
+    )
     
     # 使用 ChatGPT 彙整重點
     summary = summarize_text(all_text)
