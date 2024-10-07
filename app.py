@@ -43,12 +43,14 @@ def split_audio_ffmpeg(file_path, segment_length=600):
     Returns:
         List[str]: 分割後的音檔路徑列表。
     """
+    print("～分割中～")
     # 獲取音檔資訊，取得總時長
     command = f"ffprobe -v error -show_entries format=duration -of csv=p=0 {file_path}"
     total_duration = float(subprocess.check_output(command, shell=True).decode().strip())
 
     # 開始分割音檔
     segments = []
+    print("～開始分割音檔～")
     for i in range(0, int(total_duration), segment_length):
         output_file = f"{file_path}_part_{i // segment_length}.m4a"
         # 使用 FFmpeg 分割音檔
@@ -107,15 +109,20 @@ def handle_file_message(event):
     message_id = event.message.id
     message_content = line_bot_api.get_message_content(message_id)
 
+    print("～已接收到檔案～")
+
     # 儲存檔案
     audio_file_path = f"{message_id}.m4a"
     with open(audio_file_path, 'wb') as fd:
         for chunk in message_content.iter_content():
             fd.write(chunk)
+
+    print("～已儲存檔案～")
     
     # 檢查檔案大小
     file_size = os.path.getsize(audio_file_path)
     if file_size > WHISPER_API_MAX_SIZE:
+        print("～檔案過大，需要分割～")
         # 如果檔案太大，進行分割
         audio_segments = split_audio_ffmpeg(audio_file_path)
     else:
