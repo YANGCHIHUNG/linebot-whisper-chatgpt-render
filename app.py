@@ -1,10 +1,10 @@
 import os
+import subprocess
 import requests
 from flask import Flask, request, abort
 from linebot import LineBotApi, WebhookHandler
 from linebot.exceptions import InvalidSignatureError
 from linebot.models import MessageEvent, FileMessage, TextSendMessage
-from pydub import AudioSegment
 
 app = Flask(__name__)
 
@@ -31,19 +31,32 @@ def callback():
     
     return 'OK'
 
-# 將音檔切割為較小的片段（每片段 10 分鐘）
-def split_audio(file_path, segment_length_ms=300000):
-    audio = AudioSegment.from_file(file_path)
-    duration_ms = len(audio)
+# 使用 FFmpeg 進行音檔分割
+def split_audio_ffmpeg(file_path, segment_length=600):
+    """
+    使用 FFmpeg 將音檔分割成較小片段。
+
+    Args:
+        file_path (str): 原始音檔路徑。
+        segment_length (int): 每段音檔長度（秒），預設為 600 秒（10 分鐘）。
+
+    Returns:
+        List[str]: 分割後的音檔路徑列表。
+    """
+    # 獲取音檔資訊，取得總時長
+    command = f"ffprobe -v error -show_entries format=duration -of csv=p=0 {file_path}"
+    total_duration = float(subprocess.check_output(command, shell=True).decode().strip())
+
+    # 開始分割音檔
+    segments = []
+    for i in range(0, int(total_duration), segment_length):
+        output_file = f"{file_path}_part_{i // segment_length}.m4a"
+        # 使用 FFmpeg 分割音檔
+        command = f"ffmpeg -y -i {file_path} -ss {i} -t {segment_length} -c copy {output_file}"
+        subprocess.run(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        segments.append(output_file)
     
-    audio_segments = []
-    for i in range(0, duration_ms, segment_length_ms):
-        segment = audio[i:i+segment_length_ms]
-        segment_path = f"{file_path}_part_{i // segment_length_ms}.m4a"
-        segment.export(segment_path, format="m4a")
-        audio_segments.append(segment_path)
-    
-    return audio_segments
+    return segments
 
 # 將音檔發送給 Whisper API 進行語音轉文字
 def transcribe_audio(file_path):
@@ -104,7 +117,7 @@ def handle_file_message(event):
     file_size = os.path.getsize(audio_file_path)
     if file_size > WHISPER_API_MAX_SIZE:
         # 如果檔案太大，進行分割
-        audio_segments = split_audio(audio_file_path)
+        audio_segments = split_audio_ffmpeg(audio_file_path)
     else:
         # 否則直接處理整個音檔
         audio_segments = [audio_file_path]
