@@ -32,7 +32,7 @@ def callback():
     return 'OK'
 
 # 將音檔切割為較小的片段（每片段 10 分鐘）
-def split_audio(file_path, segment_length_ms=600000):
+def split_audio(file_path, segment_length_ms=300000):
     audio = AudioSegment.from_file(file_path)
     duration_ms = len(audio)
     
