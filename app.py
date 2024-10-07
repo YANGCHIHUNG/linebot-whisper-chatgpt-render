@@ -135,6 +135,9 @@ def handle_file_message(event):
         transcription = transcribe_audio(segment)
         all_text += transcription + "\n"
 
+    if len(all_text) > 5000:
+        all_text = all_text[:5000]  # 截取前 5000 字元
+
     # 將轉錄結果作為文字訊息回傳給用戶
     line_bot_api.reply_message(
         event.reply_token,
@@ -143,6 +146,9 @@ def handle_file_message(event):
     
     # 使用 ChatGPT 彙整重點
     summary = summarize_text(all_text)
+
+    if len(summary) > 5000:
+        summary = summary[:5000]  # 截取前 5000 字元
     
     # 回傳彙整的重點
     line_bot_api.push_message(
