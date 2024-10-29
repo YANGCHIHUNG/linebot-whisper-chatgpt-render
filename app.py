@@ -59,9 +59,9 @@ def handle_file_message(event):
         summary = '無法進行語音轉文字，請稍後再試。'
 
     # 回傳彙整結果
-    line_bot_api.reply_message(
+    line_bot_api.reply_message( 
         event.reply_token,
-        TextSendMessage(text=result_text)
+        TextSendMessage(text=result_text),
         TextSendMessage(text=summary)
     )
 
