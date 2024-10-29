@@ -58,9 +58,11 @@ def handle_file_message(event):
         summary = '無法進行語音轉文字，請稍後再試。'
 
     line_bot_api.reply_message(
-        event.reply_token,
-        TextSendMessage(text=result_text),
-        TextSendMessage(text=summary)
+        event.reply_token
+        [
+            TextSendMessage(text=result_text),
+            TextSendMessage(text=summary)
+        ]
     )
 
 def transcribe_audio(file_path):
