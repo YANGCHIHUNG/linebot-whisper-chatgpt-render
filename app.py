@@ -59,10 +59,7 @@ def handle_file_message(event):
 
     line_bot_api.reply_message(
         event.reply_token
-        [
-            TextSendMessage(text=result_text),
-            TextSendMessage(text=summary)
-        ]
+        TextSendMessage(text=summary)
     )
 
 def transcribe_audio(file_path):
