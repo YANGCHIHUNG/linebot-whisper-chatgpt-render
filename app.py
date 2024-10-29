@@ -51,12 +51,16 @@ def handle_file_message(event):
     # 回傳轉換結果
     if transcription:
         result_text = transcription.get('text', '無法進行語音轉文字')
+        transcription_text = transcription.get('text', '無法進行語音轉文字')
+        summary = summarize_text(transcription_text)
     else:
         result_text = '無法進行語音轉文字，請稍後再試。'
+        summary = '無法進行語音轉文字，請稍後再試。'
 
     line_bot_api.reply_message(
         event.reply_token,
-        TextSendMessage(text=result_text)
+        TextSendMessage(text=result_text),
+        TextSendMessage(text=summary)
     )
 
 def transcribe_audio(file_path):
